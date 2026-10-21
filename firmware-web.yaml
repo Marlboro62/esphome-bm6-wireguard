@@ -1,0 +1,28 @@
+# Firmware "bootstrap" compilé par GitHub Actions et flashé depuis le navigateur.
+# Il ne contient AUCUN secret : le WiFi est saisi via Improv (série),
+# puis l'appareil est "adopté" dans ESPHome et remplacé par exemple/bt-ferrari.yaml.
+substitutions:
+  name: bt-proxy-mobile
+  friendly_name: BT Proxy Mobile
+
+packages:
+  base: !include packages/base.yaml
+
+esphome:
+  project:
+    name: marlboro62.bt-proxy-wireguard
+    version: "1.0.0"
+
+wifi:
+  ap: {}
+
+improv_serial:
+captive_portal:
+
+api:                       # volontairement sans chiffrement : remplacé juste après l'adoption
+ota:
+  - platform: esphome      # sans mot de passe, idem
+
+dashboard_import:
+  package_import_url: github://Marlboro62/esphome-bm6-wireguard/exemple/bt-ferrari.yaml@main
+  import_full_config: false

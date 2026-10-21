@@ -1,0 +1,69 @@
+# Package WiFi (maison + hotspot) + tunnel WireGuard + API/OTA sécurisés.
+# Les mots de passe et clés viennent du secrets.yaml de l'utilisateur.
+substitutions:
+  wg_address: 10.0.0.5                 # IP de l'ESP32 dans le VPN
+  wg_netmask: 255.255.255.0
+  wg_port: "51820"
+  wg_vpn_net: 10.0.0.0/24
+  wg_home_net: 192.168.1.0/24          # réseau local à joindre (Home Assistant)
+
+wifi:
+  networks:
+    - ssid: !secret wifi_ssid
+      password: !secret wifi_password
+      priority: 10
+    - ssid: !secret wifi_hotspot_ssid
+      password: !secret wifi_hotspot_password
+      priority: 5
+  power_save_mode: NONE                # indispensable pour le BLE
+  reboot_timeout: 10min
+  ap:
+    ssid: "${name}-fallback"
+    password: !secret ap_password
+
+captive_portal:
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+# WireGuard a besoin de l'heure : SNTP fonctionne même sans Home Assistant
+time:
+  - platform: sntp
+    id: sntp_time
+    servers:
+      - pool.ntp.org
+  - platform: homeassistant
+    id: ha_time
+
+wireguard:
+  address: ${wg_address}
+  netmask: ${wg_netmask}
+  private_key: !secret wg_private_key
+  peer_endpoint: !secret wg_endpoint   # ex. mon-domaine.duckdns.org
+  peer_port: ${wg_port}
+  peer_public_key: !secret wg_server_public_key
+  peer_allowed_ips:
+    - ${wg_vpn_net}
+    - ${wg_home_net}
+  peer_persistent_keepalive: 21s       # maintient le NAT 4G/5G ouvert
+  time_id: sntp_time
+
+sensor:
+  - platform: wireguard
+    latest_handshake:
+      name: "Dernier handshake WireGuard"
+
+binary_sensor:
+  - platform: wireguard
+    status:
+      name: "Tunnel WireGuard"
+
+text_sensor:
+  - platform: wireguard
+    address:
+      name: "IP WireGuard"

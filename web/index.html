@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flasher le proxy Bluetooth M5Stack Atom</title>
+  <script type="module" src="https://unpkg.com/esp-web-install-button@3.2.0/dist/web/install-button.js?module"></script>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:640px;margin:2rem auto;padding:0 1rem;line-height:1.5}
+    ol li{margin-bottom:.5rem}
+  </style>
+</head>
+<body>
+  <h1>Proxy Bluetooth M5Stack Atom</h1>
+  <p>Premier flash depuis le navigateur (Chrome ou Edge sur ordinateur).</p>
+  <ol>
+    <li>Branche le M5Stack Atom en USB.</li>
+    <li>Clique sur le bouton ci-dessous et choisis le port série.</li>
+    <li>Saisis ton WiFi quand la fenêtre le demande.</li>
+    <li>Dans Home Assistant : <em>Paramètres → Appareils → ESPHome</em>, ajoute l'appareil découvert,
+        puis dans le dashboard ESPHome clique sur <strong>Adopter</strong>.</li>
+    <li>Complète ton <code>secrets.yaml</code> (voir le dépôt) et installe : le tunnel WireGuard s'active par OTA.</li>
+  </ol>
+  <esp-web-install-button manifest="manifest.json">
+    <button slot="activate">Installer le firmware</button>
+    <span slot="unsupported">Ce navigateur ne gère pas Web Serial : utilise Chrome ou Edge.</span>
+    <span slot="not-allowed">Web Serial exige une page en HTTPS.</span>
+  </esp-web-install-button>
+</body>
+</html>

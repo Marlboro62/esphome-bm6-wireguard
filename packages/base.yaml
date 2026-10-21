@@ -1,0 +1,130 @@
+# Package de base : proxy Bluetooth + LED d'état + capteurs + boutons
+# Utilisé à la fois par le firmware de premier flash et par la config finale.
+substitutions:
+  name: bt-proxy-mobile
+  friendly_name: BT Proxy Mobile
+  home_ssid: ""        # SSID du WiFi maison (sert uniquement à la couleur de la LED)
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      - script.execute: maj_led
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf       # Plus stable qu'Arduino pour BLE + WireGuard
+
+esp32_ble_tracker:
+  scan_parameters:
+    interval: 300ms
+    window: 250ms
+    active: true
+
+bluetooth_proxy:
+  active: true
+
+logger:
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: led_atom
+    name: "LED Statut"
+    pin: GPIO27
+    num_leds: 1
+    channel_colors: GRB
+    chipset: WS2812
+    default_transition_length: 0s
+
+# Logique unique pour la LED :
+# orange = pas de WiFi, rouge = WiFi ok mais HA injoignable,
+# vert = WiFi maison, bleu = autre WiFi (hotspot)
+script:
+  - id: maj_led
+    mode: restart
+    then:
+      - lambda: |-
+          auto call = id(led_atom).turn_on();
+          call.set_brightness(0.2);
+          const std::string &ssid = id(wifi_nom_actuel).state;
+          if (ssid.empty()) {
+            call.set_rgb(1, 0.5, 0);
+          } else if (!id(statut_ha).state) {
+            call.set_rgb(1, 0, 0);
+          } else if (ssid == "${home_ssid}") {
+            call.set_rgb(0, 1, 0);
+          } else {
+            call.set_rgb(0, 0, 1);
+          }
+          call.perform();
+
+sensor:
+  - platform: wifi_signal
+    name: "Force signal WiFi"
+    update_interval: 60s
+
+text_sensor:
+  - platform: wifi_info
+    ssid:
+      name: "WiFi connecté"
+      id: wifi_nom_actuel
+      on_value:
+        then:
+          - script.execute: maj_led
+    mac_address:
+      name: "Adresse MAC WiFi"
+      id: wifi_mac
+    ip_address:
+      name: "Adresse IP"
+  # L'adresse MAC Bluetooth de l'ESP32 = MAC WiFi + 2
+  - platform: template
+    name: "Adresse MAC Bluetooth"
+    lambda: |-
+      std::string mac_str = id(wifi_mac).state;
+      if (mac_str.length() < 17) return std::string("N/A");
+      int last = std::stoi(mac_str.substr(15, 2), nullptr, 16);
+      last = (last + 2) & 0xFF;
+      char buf[3];
+      sprintf(buf, "%02X", last);
+      return mac_str.substr(0, 15) + std::string(buf);
+    update_interval: 60s
+
+binary_sensor:
+  - platform: status
+    name: "Statut proxy"
+    id: statut_ha
+    on_state:
+      then:
+        - script.execute: maj_led
+  - platform: gpio
+    pin:
+      number: GPIO39
+      inverted: true
+    name: "Bouton Atom"
+    id: bouton_atom
+    on_click:
+      - min_length: 50ms
+        max_length: 350ms
+        then:                      # Clic court : flash blanc 1 s
+          - light.turn_on:
+              id: led_atom
+              brightness: 50%
+              red: 1
+              green: 1
+              blue: 1
+          - delay: 1s
+          - script.execute: maj_led
+      - min_length: 1000ms
+        max_length: 3000ms
+        then:                      # Appui long : redémarrage
+          - button.press: restart_btn
+
+button:
+  - platform: restart
+    name: "Redémarrer"
+    id: restart_btn
+  - platform: safe_mode
+    name: "Redémarrer en mode sans échec"

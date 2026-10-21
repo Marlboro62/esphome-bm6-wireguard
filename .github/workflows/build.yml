@@ -1,0 +1,44 @@
+name: Build firmware et publier la page de flash
+on:
+  push:
+    branches: [main]
+    paths: ['firmware-web.yaml', 'packages/**', 'web/**', '.github/workflows/build.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install esphome
+      - run: esphome compile firmware-web.yaml
+      - name: Assembler le site
+        run: |
+          mkdir -p site
+          cp web/index.html web/manifest.json site/
+          cp "$(find .esphome/build -name firmware.factory.bin | head -n1)" site/firmware.factory.bin
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

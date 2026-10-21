@@ -1,0 +1,12 @@
+# Fichier adopté par le dashboard ESPHome (ou à copier tel quel dans /config/esphome/).
+substitutions:
+  name: bt-ferrari-mobile
+  friendly_name: BT Proxy Ferrari
+  home_ssid: !secret wifi_ssid       # sert à la couleur de la LED (vert = maison)
+
+packages:
+  proxy:
+    url: https://github.com/Marlboro62/esphome-bm6-wireguard
+    ref: main
+    files: [packages/base.yaml, packages/wireguard.yaml]
+    refresh: 1d
